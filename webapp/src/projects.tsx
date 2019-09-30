@@ -626,41 +626,56 @@ export class ProjectsDetail extends data.Component<ProjectsDetailProps, Projects
         else if (youTubeId)
             clickLabel = lf("Play Video");
 
-        return <div className="ui grid stackable padded">
-            {image && <div className="imagewrapper">
-                <div className="image" style={{ backgroundImage: `url("${image}")` }} />
-            </div>}
-            <div className="column twelve wide">
-                <div className="segment">
-                    <div className="header"> {name} </div>
-                    {tags && <div className="ui labels">
-                        {tags.map(tag => <div className={`ui ${tagColors[tag] || ''} label`}>{pxt.Util.rlf(tag)}
-                        </div>)}</div>}
-                    {descriptions && descriptions.map((desc, index) => {
-                        return <p key={`line${index}`} className="detail">
-                            {desc}
-                        </p>
-                    })}
-                    <div className="actions">
-                        <sui.Button
-                            key={`action_${clickLabel}`}
-                            text={clickLabel}
-                            className={`approve huge positive`}
-                            onClick={this.handleDetailClick}
-                            onKeyDown={sui.fireClickOnEnter}
-                            autoFocus={true}
-                        />
-                        {cardType == "forumUrl" && <sui.Button
-                            key="action_open"
-                            text={lf("Open in Editor")}
-                            className={`approve huge`}
-                            onClick={this.handleOpenForumUrlInEditor}
-                            onKeyDown={sui.fireClickOnEnter}
-                        />}
+       if (!youTubeId)
+            return <div className="ui grid stackable padded">
+                {image && <div className="imagewrapper">
+                    <div className="image" style={{ backgroundImage: `url("${image}")` }} />
+                </div>}
+                <div className="column twelve wide">
+                    <div className="segment">
+                        <div className="header"> {name} </div>
+                        {tags && <div className="ui labels">
+                            {tags.map(tag => <div className={`ui ${tagColors[tag] || ''} label`}>{pxt.Util.rlf(tag)}
+                            </div>)}</div>}
+                        {descriptions && descriptions.map((desc, index) => {
+                            return <p key={`line${index}`} className="detail">
+                                {desc}
+                            </p>
+                        })}
+                        <div className="actions">
+                            <sui.Button
+                                key={`action_${clickLabel}`}
+                                text={clickLabel}
+                                className={`approve huge positive`}
+                                onClick={this.handleDetailClick}
+                                onKeyDown={sui.fireClickOnEnter}
+                                autoFocus={true}
+                            />
+                            {cardType == "forumUrl" && <sui.Button
+                                key="action_open"
+                                text={lf("Open in Editor")}
+                                className={`approve huge`}
+                                onClick={this.handleOpenForumUrlInEditor}
+                                onKeyDown={sui.fireClickOnEnter}
+                            />}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>;
+            </div>;
+        else
+            return <div className="ui grid stackable padded">
+                {image && <div className="imagewrapper">
+                    <div className="image" style={{ backgroundImage: `url("${image}")` }} />
+                </div>}
+                <div className="column twelve wide">
+                    <div className="segment">
+                        {tags && <div className="ui labels">
+                            {tags.map(tag => <div className={`ui ${tagColors[tag] || ''} label`}>{pxt.Util.rlf(tag)}
+                            </div>)}</div>}
+                        <iframe width='100%' height='90%' src={`https://www.youtube-nocookie.com/embed/${youTubeId}`} frameBorder='0' allowFullScreen style={{display: 'block', position: 'absolute', top: '5%'}}></iframe>
+                    </div>
+                </div>
+            </div>;
     }
 }
 
