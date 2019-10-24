@@ -10,6 +10,7 @@ import * as md from "./marked";
 import * as compiler from "./compiler";
 import * as codecard from "./codecard";
 import { HintTooltip } from "./hinttooltip";
+import { PlayButton } from "./simtoolbar";
 import { ProjectView } from "./app";
 
 type ISettingsProps = pxt.editor.ISettingsProps;
@@ -262,7 +263,6 @@ export class TutorialHint extends data.Component<ISettingsProps, TutorialHintSta
 }
 
 interface TutorialCardState {
-    popout?: boolean;
     showHintTooltip?: boolean;
     showSeeMore?: boolean;
 }
@@ -336,17 +336,12 @@ export class TutorialCard extends data.Component<TutorialCardProps, TutorialCard
         }
     }
 
-    setPopout() {
-        this.setState({ popout: true });
-    }
-
     private closeLightbox() {
         sounds.tutorialNext();
         document.documentElement.removeEventListener("keydown", this.closeLightboxOnEscape);
 
         // Hide lightbox
         this.props.parent.hideLightbox();
-        this.setState({ popout: false });
     }
 
     componentWillUpdate() {
@@ -376,19 +371,7 @@ export class TutorialCard extends data.Component<TutorialCardProps, TutorialCard
     componentDidUpdate(prevProps: ISettingsProps, prevState: TutorialCardState) {
         const options = this.props.parent.state.tutorialOptions;
         const tutorialCard = this.refs['tutorialmessage'] as HTMLElement;
-        const tutorialOkRef = this.refs["tutorialok"] as sui.Button;
-        const okButton = ReactDOM.findDOMNode(tutorialOkRef) as HTMLElement;
-        if (prevState.popout != this.state.popout && this.state.popout) {
-            // Setup focus trap around the tutorial card and the ok button
-            tutorialCard.addEventListener('keydown', this.tutorialCardKeyDown);
-            okButton.addEventListener('keydown', this.okButtonKeyDown);
-            tutorialCard.focus();
-        } else if (prevState.popout != this.state.popout && !this.state.popout) {
-            // Unregister event handlers
-            tutorialCard.removeEventListener('keydown', this.tutorialCardKeyDown);
-            okButton.removeEventListener('keydown', this.okButtonKeyDown);
-            tutorialCard.focus();
-        }
+
         const step = this.props.parent.state.tutorialOptions.tutorialStep;
         if (step != this.lastStep) {
             const animationClasses = `fade ${step < this.lastStep ? "right" : "left"} in visible transition animating`;
@@ -404,10 +387,6 @@ export class TutorialCard extends data.Component<TutorialCardProps, TutorialCard
 
             if (!!options.tutorialStepInfo[step].unplugged) {
                 this.removeHintOnClick();
-            }
-
-            if (!this.state.showHintTooltip) {
-                this.showHint(true); // re-bind events after tutorial DOM loaded
             }
         }
     }
@@ -483,8 +462,12 @@ export class TutorialCard extends data.Component<TutorialCardProps, TutorialCard
         this.setState({ showSeeMore: show });
     }
 
+    getCardHeight() {
+        return this.cardHeight;
+    }
+
     getExpandedCardStyle(prop: string) {
-        return { [prop] : `calc(${this.cardHeight}px + 5rem)` }
+        return { [prop] : `calc(${this.getCardHeight()}px + 2rem)` }
     }
 
     toggleHint(showFullText?: boolean) {
@@ -526,16 +509,17 @@ export class TutorialCard extends data.Component<TutorialCardProps, TutorialCard
 
     renderCore() {
         const options = this.props.parent.state.tutorialOptions;
-        const { tutorialReady, tutorialStepInfo, tutorialStep, tutorialStepExpanded } = options;
+        const { tutorialReady, tutorialStepInfo, tutorialStep, tutorialStepExpanded, metadata } = options;
         if (!tutorialReady) return <div />
         const tutorialCardContent = tutorialStepInfo[tutorialStep].headerContentMd;
 
         const lockedEditor = !!pxt.appTarget.appTheme.lockedEditor;
         const currentStep = tutorialStep;
         const maxSteps = tutorialStepInfo.length;
-        const hasPrevious = tutorialReady && currentStep != 0;
-        const hasNext = tutorialReady && currentStep != maxSteps - 1;
-        const hasFinish = !lockedEditor && currentStep == maxSteps - 1;
+        const hideIteration = metadata && metadata.hideIteration;
+        const hasPrevious = tutorialReady && currentStep != 0 && !hideIteration;
+        const hasNext = tutorialReady && currentStep != maxSteps - 1 && !hideIteration;
+        const hasFinish = !lockedEditor && currentStep == maxSteps - 1 && !hideIteration;
         const hasHint = this.hasHint();
 
         let tutorialAriaLabel = '',
@@ -563,13 +547,13 @@ export class TutorialCard extends data.Component<TutorialCardProps, TutorialCard
                         {hasHint && <TutorialHint ref="tutorialhint" parent={this.props.parent} />}
                     </div>
                     <div ref="tutorialmessage" className={`tutorialmessage`} role="alert" aria-label={tutorialAriaLabel} tabIndex={hasHint ? 0 : -1}
-                        onClick={hintOnClick} onKeyDown={sui.fireClickOnEnter}>
+                        onClick={hasHint ? hintOnClick : undefined} onKeyDown={hasHint ? sui.fireClickOnEnter : undefined}>
                         <div className="content">
                             <md.MarkedContent className="no-select" markdown={tutorialCardContent} parent={this.props.parent} />
                         </div>
-                        {this.state.showSeeMore && !tutorialStepExpanded ? <sui.Button className="fluid compact attached bottom lightgrey" icon="chevron down" tabIndex={0} text={lf("More...")} onClick={this.toggleExpanded} onKeyDown={sui.fireClickOnEnter} /> : undefined}
-                        {this.state.showSeeMore && tutorialStepExpanded ? <sui.Button className="fluid compact attached bottom lightgrey" icon="chevron up" tabIndex={0} text={lf("Less...")} onClick={this.toggleExpanded} onKeyDown={sui.fireClickOnEnter} /> : undefined}
                     </div>
+                    {this.state.showSeeMore && !tutorialStepExpanded && <sui.Button className="fluid compact lightgrey" icon="chevron down" tabIndex={0} text={lf("More...")} onClick={this.toggleExpanded} onKeyDown={sui.fireClickOnEnter} />}
+                    {this.state.showSeeMore && tutorialStepExpanded && <sui.Button className="fluid compact lightgrey" icon="chevron up" tabIndex={0} text={lf("Less...")} onClick={this.toggleExpanded} onKeyDown={sui.fireClickOnEnter} />}
                     <sui.Button ref="tutorialok" id="tutorialOkButton" className="large green okbutton showlightbox" text={lf("Ok")} onClick={this.closeLightbox} onKeyDown={sui.fireClickOnEnter} />
                 </div>
                 {hasNext ? <sui.Button icon={`${isRtl ? 'left' : 'right'} chevron orange large`} className={`nextbutton right attached ${!hasNext ? 'disabled' : ''}`} text={lf("Next")} textClass="widedesktop only" ariaLabel={lf("Go to the next step of the tutorial.")} onClick={this.nextTutorialStep} onKeyDown={sui.fireClickOnEnter} /> : undefined}
@@ -666,5 +650,34 @@ export class ChooseRecipeDialog extends data.Component<ISettingsProps, ChooseRec
                 </div>
             </sui.Modal>
         )
+    }
+}
+
+export class WorkspaceHeader extends data.Component<any, {}> {
+    private flyoutWidth: number = 0;
+    private flyoutTitle: string = lf("Toolbox");
+    private workspaceTitle: string = lf("Workspace");
+    constructor(props: any) {
+        super(props);
+    }
+
+    componentWillUpdate() {
+        let flyout = document.querySelector('.blocklyFlyout');
+        if (flyout) {
+            this.flyoutWidth = flyout.clientWidth;
+        }
+    }
+
+    private headerStyle() {
+        return {
+            width: this.flyoutWidth
+        }
+    }
+
+    renderCore() {
+        return <div id="headers">
+                    <div id="flyoutHeader" style={this.headerStyle()}>{this.flyoutTitle}</div>
+                    <div id="workspaceHeader">{this.workspaceTitle}</div>
+               </div>;
     }
 }

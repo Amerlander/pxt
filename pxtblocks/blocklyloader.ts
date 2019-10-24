@@ -2,6 +2,7 @@
 /// <reference path="../built/pxtlib.d.ts" />
 
 namespace pxt.blocks {
+    export let promptTranslateBlock: (blockId: string, blockTranslationIds: string[]) => void;
 
     const typeDefaults: Map<{ field: string, block: string, defaultValue: string }> = {
         "string": {
@@ -284,7 +285,7 @@ namespace pxt.blocks {
 
     function createFlyoutLabel(name: string, color?: string, icon?: string, iconClass?: string): HTMLElement {
         // Add the Heading label
-        let headingLabel = goog.dom.createDom('label') as HTMLElement;
+        let headingLabel = Blockly.utils.xml.createElement('label') as HTMLElement;
         headingLabel.setAttribute('text', name);
         if (color) {
             headingLabel.setAttribute('web-icon-color', pxt.toolbox.convertColor(color));
@@ -302,7 +303,7 @@ namespace pxt.blocks {
     }
 
     export function createFlyoutButton(callbackkey: string, label: string) {
-        let button = goog.dom.createDom('button') as Element;
+        let button = Blockly.utils.xml.createElement('button') as Element;
         button.setAttribute('text', label);
         button.setAttribute('callbackkey', callbackkey);
         return button;
@@ -429,6 +430,21 @@ namespace pxt.blocks {
             block: {
                 codeCard: mkCard(fn, blockXml),
                 init: function () { initBlock(this, info, fn, comp) }
+            }
+        }
+
+        if (pxt.Util.isTranslationMode()
+            && pxt.blocks.promptTranslateBlock) {
+            cachedBlock.block.customContextMenu = (options: any[]) => {
+                if (fn.attributes.translationId) {
+                    options.push({
+                        enabled: true,
+                        text: lf("Translate this block"),
+                        callback: function () {
+                            pxt.blocks.promptTranslateBlock(id, [fn.attributes.translationId]);
+                        }
+                    })
+                }
             }
         }
 
@@ -988,6 +1004,21 @@ namespace pxt.blocks {
             blocksXml: xml ? (`<xml xmlns="http://www.w3.org/1999/xhtml">` + (cleanOuterHTML(xml) || `<block type="${id}"></block>`) + "</xml>") : undefined,
             url: url
         };
+        if (pxt.Util.isTranslationMode()
+            && pxt.blocks.promptTranslateBlock) {
+            block.customContextMenu = (options: any[]) => {
+                const blockd = pxt.blocks.getBlockDefinition(block.type);
+                if (blockd && blockd.translationIds) {
+                    options.push({
+                        enabled: true,
+                        text: lf("Translate this block"),
+                        callback: function () {
+                            pxt.blocks.promptTranslateBlock(id, blockd.translationIds);
+                        }
+                    })
+                }
+            };
+        }
     }
 
     export function installHelpResources(id: string, name: string, tooltip: any, url: string, colour: string, colourSecondary?: string, colourTertiary?: string) {
@@ -1354,7 +1385,8 @@ namespace pxt.blocks {
         const blockDrag = (<any>Blockly).BlockDragger.prototype.dragBlock;
         (<any>Blockly).BlockDragger.prototype.dragBlock = function (e: any, currentDragDeltaXY: any) {
             const blocklyToolboxDiv = document.getElementsByClassName('blocklyToolboxDiv')[0] as HTMLElement;
-            const blocklyTreeRoot = document.getElementsByClassName('blocklyTreeRoot')[0] as HTMLElement;
+            const blocklyTreeRoot = document.getElementsByClassName('blocklyTreeRoot')[0] as HTMLElement
+                || document.getElementsByClassName('blocklyFlyout')[0] as HTMLElement;
             const trashIcon = document.getElementById("blocklyTrashIcon");
             if (blocklyTreeRoot && trashIcon) {
                 const distance = calculateDistance(blocklyTreeRoot.getBoundingClientRect(), e.clientX);
@@ -1362,14 +1394,16 @@ namespace pxt.blocks {
                     const opacity = distance / 200;
                     trashIcon.style.opacity = `${1 - opacity}`;
                     trashIcon.style.display = 'block';
-                    blocklyTreeRoot.style.opacity = `${opacity}`;
-                    if (distance < 50) {
-                        pxt.BrowserUtils.addClass(blocklyToolboxDiv, 'blocklyToolboxDeleting');
+                    if (blocklyToolboxDiv) {
+                        blocklyTreeRoot.style.opacity = `${opacity}`;
+                        if (distance < 50) {
+                            pxt.BrowserUtils.addClass(blocklyToolboxDiv, 'blocklyToolboxDeleting');
+                        }
                     }
                 } else {
                     trashIcon.style.display = 'none';
                     blocklyTreeRoot.style.opacity = '1';
-                    pxt.BrowserUtils.removeClass(blocklyToolboxDiv, 'blocklyToolboxDeleting');
+                    if (blocklyToolboxDiv) pxt.BrowserUtils.removeClass(blocklyToolboxDiv, 'blocklyToolboxDeleting');
                 }
             }
             return blockDrag.call(this, e, currentDragDeltaXY);
@@ -1385,12 +1419,13 @@ namespace pxt.blocks {
         (<any>Blockly).BlockDragger.prototype.endBlockDrag = function (e: any, currentDragDeltaXY: any) {
             blockEndDrag.call(this, e, currentDragDeltaXY);
             const blocklyToolboxDiv = document.getElementsByClassName('blocklyToolboxDiv')[0] as HTMLElement;
-            const blocklyTreeRoot = document.getElementsByClassName('blocklyTreeRoot')[0] as HTMLElement;
+            const blocklyTreeRoot = document.getElementsByClassName('blocklyTreeRoot')[0] as HTMLElement
+                || document.getElementsByClassName('blocklyFlyout')[0] as HTMLElement;
             const trashIcon = document.getElementById("blocklyTrashIcon");
             if (trashIcon && blocklyTreeRoot) {
                 trashIcon.style.display = 'none';
                 blocklyTreeRoot.style.opacity = '1';
-                pxt.BrowserUtils.removeClass(blocklyToolboxDiv, 'blocklyToolboxDeleting');
+                if (blocklyToolboxDiv) pxt.BrowserUtils.removeClass(blocklyToolboxDiv, 'blocklyToolboxDeleting');
             }
         }
     }
@@ -1951,7 +1986,7 @@ namespace pxt.blocks {
                 xmlList.push(headingLabel);
             }
 
-            let button = goog.dom.createDom('button') as HTMLElement;
+            let button = document.createElement('button') as HTMLElement;
             button.setAttribute('text', lf("Make a Variable..."));
             button.setAttribute('callbackkey', 'CREATE_VARIABLE');
 
@@ -2213,15 +2248,15 @@ namespace pxt.blocks {
                          *   </block>
                          * </xml>
                          */
-                        let xml = goog.dom.createDom('xml');
-                        let block = goog.dom.createDom('block');
+                        let xml = Blockly.utils.xml.createElement('xml');
+                        let block = Blockly.utils.xml.createElement('block');
                         block.setAttribute('type', this.defType_);
                         let xy = this.getRelativeToSurfaceXY();
                         let x = xy.x + (Blockly as any).SNAP_RADIUS * (this.RTL ? -1 : 1);
                         let y = xy.y + (Blockly as any).SNAP_RADIUS * 2;
                         block.setAttribute('x', x);
                         block.setAttribute('y', y);
-                        let field = goog.dom.createDom('field');
+                        let field = Blockly.utils.xml.createElement('field');
                         field.setAttribute('name', 'NAME');
                         field.appendChild(document.createTextNode(this.getProcedureCall()));
                         block.appendChild(field);
@@ -2301,7 +2336,7 @@ namespace pxt.blocks {
             const newFunctionTitle = lf("New function name:");
 
             // Add the "Make a function" button
-            let button = goog.dom.createDom('button');
+            let button = Blockly.utils.xml.createElement('button');
             button.setAttribute('text', newFunction);
             button.setAttribute('callbackkey', 'CREATE_FUNCTION');
 
@@ -2321,12 +2356,12 @@ namespace pxt.blocks {
                     x = xy.x + (Blockly as any).SNAP_RADIUS * (topBlock.RTL ? -1 : 1);
                     y = xy.y + (Blockly as any).SNAP_RADIUS * 2;
                 }
-                let xml = goog.dom.createDom('xml');
-                let block = goog.dom.createDom('block');
+                let xml = Blockly.utils.xml.createElement('xml');
+                let block = Blockly.utils.xml.createElement('block');
                 block.setAttribute('type', 'procedures_defnoreturn');
                 block.setAttribute('x', String(x));
                 block.setAttribute('y', String(y));
-                let field = goog.dom.createDom('field');
+                let field = Blockly.utils.xml.createElement('field');
                 field.setAttribute('name', 'NAME');
                 field.appendChild(document.createTextNode(name));
                 block.appendChild(field);
@@ -2385,7 +2420,7 @@ namespace pxt.blocks {
                     // <block type="procedures_callnoreturn" gap="16">
                     //   <field name="NAME">name</field>
                     // </block>
-                    let block = goog.dom.createDom('block');
+                    let block = Blockly.utils.xml.createElement('block');
                     block.setAttribute('type', templateName);
                     block.setAttribute('gap', '16');
                     block.setAttribute('colour', pxt.toolbox.getNamespaceColor('functions'));
@@ -2816,6 +2851,7 @@ namespace pxt.blocks {
             (varField as any).initModel();
             const model = (varField as any).getVariable();
             model.name = newName;
+            varField.setText(newName);
             varField.setValue(model.getId());
         }
     }

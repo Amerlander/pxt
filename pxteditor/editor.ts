@@ -103,6 +103,7 @@ namespace pxt.editor {
         dependencies?: pxt.Map<string>;
         tsOnly?: boolean;
         preferredEditor?: string; // preferred editor to open, pxt.BLOCKS_PROJECT_NAME, ...
+        extensionUnderTest?: string; // workspace id of the extension under test
     }
 
     export interface ExampleImportOptions {
@@ -351,6 +352,10 @@ namespace pxt.editor {
 
         // Used with the @tutorialCompleted macro. See docs/writing-docs/tutorials.md for more info
         onTutorialCompleted?: () => void;
+
+        // Used with @codeStart, @codeStop metadata (MINECRAFT HOC ONLY)
+        onCodeStart?: () => void;
+        onCodeStop?: () => void;
     }
 
     export interface FieldExtensionOptions {
