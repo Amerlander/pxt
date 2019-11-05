@@ -13,6 +13,7 @@
         typeScript?: string;
         imageUrl?: string;
         youTubeId?: string;
+        embedYouTube?: boolean;
         buttonLabel?: string;
         time?: number;
         url?: string;

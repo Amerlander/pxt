@@ -419,6 +419,7 @@ export class ProjectsCarousel extends data.Component<ProjectsCarouselProps, Proj
                                 url={scr.url}
                                 imageUrl={scr.imageUrl}
                                 youTubeId={scr.youTubeId}
+                                embedYouTube={scr.embedYouTube}
                                 buttonLabel={scr.buttonLabel}
                                 label={scr.label}
                                 labelClass={scr.labelClass}
@@ -441,6 +442,7 @@ export class ProjectsCarousel extends data.Component<ProjectsCarouselProps, Proj
                             imageUrl={selectedElement.imageUrl}
                             largeImageUrl={selectedElement.largeImageUrl}
                             youTubeId={selectedElement.youTubeId}
+                            embedYouTube={selectedElement.embedYouTube}
                             buttonLabel={selectedElement.buttonLabel}
                             scr={selectedElement}
                             onClick={this.props.onClick}
@@ -639,7 +641,21 @@ export class ProjectsDetail extends data.Component<ProjectsDetailProps, Projects
         else if (youTubeId)
             clickLabel = lf("Play Video");
 
-       if (!youTubeId)
+       if (youTubeId && embedYouTube)
+           return <div className="ui grid stackable padded">
+                {image && <div className="imagewrapper">
+                    <div className="image" style={{ backgroundImage: `url("${image}")` }} />
+                </div>}
+                <div className="column twelve wide">
+                    <div className="segment">
+                        {tags && <div className="ui labels">
+                            {tags.map(tag => <div className={`ui ${tagColors[tag] || ''} label`}>{pxt.Util.rlf(tag)}
+                            </div>)}</div>}
+                        <iframe width='100%' height='90%' src={`https://www.youtube-nocookie.com/embed/${youTubeId}`} frameBorder='0' allowFullScreen style={{display: 'block', position: 'absolute', top: '5%'}}></iframe>
+                    </div>
+                </div>
+            </div>;
+        else
             return <div className="ui grid stackable padded">
                 {image && <div className="imagewrapper">
                     <div className="image" style={{ backgroundImage: `url("${image}")` }} />
@@ -675,20 +691,7 @@ export class ProjectsDetail extends data.Component<ProjectsDetailProps, Projects
                     </div>
                 </div>
             </div>;
-        else
-            return <div className="ui grid stackable padded">
-                {image && <div className="imagewrapper">
-                    <div className="image" style={{ backgroundImage: `url("${image}")` }} />
-                </div>}
-                <div className="column twelve wide">
-                    <div className="segment">
-                        {tags && <div className="ui labels">
-                            {tags.map(tag => <div className={`ui ${tagColors[tag] || ''} label`}>{pxt.Util.rlf(tag)}
-                            </div>)}</div>}
-                        <iframe width='100%' height='90%' src={`https://www.youtube-nocookie.com/embed/${youTubeId}`} frameBorder='0' allowFullScreen style={{display: 'block', position: 'absolute', top: '5%'}}></iframe>
-                    </div>
-                </div>
-            </div>;
+
     }
 }
 
