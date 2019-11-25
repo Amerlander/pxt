@@ -779,8 +779,37 @@ export class ProjectsDetail extends data.Component<ProjectsDetailProps, Projects
                         />}
                     </div>
                 </div>
-            </div>
-        </div>;
+            </div>;
+        else
+            return <div className="ui grid stackable padded">
+                {image && <div className="imagewrapper">
+                    <div className="image" style={{ backgroundImage: `url("${image}")` }} />
+                </div>}
+                <div className="column twelve wide">
+                    <div className="segment">
+                        <div className="header"> {name} </div>
+                        {tags && <div className="ui labels">
+                            {tags.map(tag => <div className={`ui ${tagColors[tag] || ''} label`}>{pxt.Util.rlf(tag)}
+                            </div>)}</div>}
+                        {descriptions && descriptions.map((desc, index) => {
+                            return <p key={`line${index}`} className="detail">
+                                {desc}
+                            </p>
+                        })}
+                        <div className="actions">
+                            {action}
+                            {cardType == "forumUrl" && <sui.Button
+                                key="action_open"
+                                text={lf("Open in Editor")}
+                                className={`approve huge`}
+                                onClick={this.handleOpenForumUrlInEditor}
+                                onKeyDown={sui.fireClickOnEnter}
+                            />}
+                        </div>
+                    </div>
+                </div>
+            </div>;
+
     }
 }
 
